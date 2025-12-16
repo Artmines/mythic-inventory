@@ -1,4 +1,4 @@
-import placeholderImage from '../../../images/items/placeholder.webp';
+import placeholderImage from '../../../images/items/ph.webp';
 
 const lua2json = (lua) =>
 	JSON.parse(
@@ -13,14 +13,17 @@ const getItemImage = (item, itemData) => {
 		return item?.MetaData?.CustomItemImage;
 	} else if (Boolean(itemData) && Boolean(itemData.iconOverride)) {
 		try {
-			return require(`../../../images/items/${itemData.iconOverride}.webp`).default;
+			return require(`../../../images/items/${itemData.iconOverride}.webp`)
+				.default;
 		} catch (error) {
 			//console.log("Error loading custom iconOverride");
 			return placeholderImage; // Fallback to placeholder
 		}
 	} else {
 		try {
-			return require(`../../../images/items/${itemData?.name || item?.Name || item?.name}.webp`).default;
+			return require(`../../../images/items/${
+				itemData?.name || item?.Name || item?.name
+			}.webp`).default;
 		} catch (error) {
 			//console.log("Error loading item image", error);
 			return placeholderImage; // Fallback to placeholder

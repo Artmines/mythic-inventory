@@ -220,6 +220,14 @@ export default (props) => {
 	const hoverOrigin = useSelector((state) => state.inventory.hoverOrigin);
 	const items = useSelector((state) => state.inventory.items);
 	const inUse = useSelector((state) => state.inventory.inUse);
+	const normalizeInv = (inv) =>
+		Array.isArray(inv) ? inv : Object.values(inv || {});
+
+	const playerInvSlots = normalizeInv(playerInventory?.inventory);
+	const secondaryInvSlots = normalizeInv(secondaryInventory?.inventory);
+
+	const playerLoaded = playerInventory?.loaded ?? true;
+	const secondaryLoaded = secondaryInventory?.loaded ?? true;
 
 	const [showHelp, setShowHelp] = useState(false);
 
@@ -230,8 +238,8 @@ export default (props) => {
 	};
 
 	const calcPlayerWeight = () => {
-		if (Object.keys(items) == 0 || !playerInventory.loaded) return 0;
-		return playerInventory.inventory
+		if (Object.keys(items).length === 0 || !playerLoaded) return 0;
+		return playerInvSlots
 			.filter((s) => Boolean(s))
 			.reduce((a, b) => {
 				return a + (items[b.Name]?.weight || 0) * b.Count;
@@ -239,8 +247,8 @@ export default (props) => {
 	};
 
 	const calcSecondaryWeight = () => {
-		if (Object.keys(items) == 0 || !secondaryInventory.loaded) return 0;
-		return secondaryInventory.inventory
+		if (Object.keys(items).length === 0 || !secondaryLoaded) return 0;
+		return secondaryInvSlots
 			.filter((s) => Boolean(s))
 			.reduce((a, b) => {
 				return a + (items[b.Name]?.weight || 0) * b.Count;
@@ -294,10 +302,14 @@ export default (props) => {
 		setOffset({ left: e.clientX - 2, top: e.clientY - 4 });
 
 		if (
-			(isShop && !playerInventory.isWeaponEligble && items[item.Name]?.type == 2) ||
-			(items[item.Name]?.type == 10 && secondaryInventory.owner == `container:${item?.MetaData?.Container}`)
+			(isShop &&
+				!playerInventory.isWeaponEligble &&
+				items[item.Name]?.type == 2) ||
+			(items[item.Name]?.type == 10 &&
+				secondaryInventory.owner ==
+					`container:${item?.MetaData?.Container}`)
 		) {
-			console.log('yeetus deletus')
+			console.log('yeetus deletus');
 			Nui.send('FrontEndSound', 'DISABLED');
 			return;
 		}
@@ -463,23 +475,26 @@ export default (props) => {
 						<FontAwesomeIcon icon={['fas', 'fingerprint']} />
 					</div>
 				</Fade>
-				<div 
-					style ={{
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
+				<div
+					style={{
+						display: 'flex',
+						justifyContent: 'center',
+						alignItems: 'center',
 						width: '100%',
 						height: '100%',
-					}} 
+					}}
 				>
 					<div
-						style ={{
+						style={{
 							width: '90%',
 							height: '60%',
-						}} 
+						}}
 					>
 						<div className={classes.root} onClick={cancelDrag}>
-							<div className={classes.gridBg} onClick={cancelDrag}>
+							<div
+								className={classes.gridBg}
+								onClick={cancelDrag}
+							>
 								<div className={classes.inventoryHeader}>
 									{playerInventory.name}
 								</div>
@@ -493,7 +508,9 @@ export default (props) => {
 											)}`}
 										</div>
 										<LinearProgress
-											className={classes.inventoryWeightBar}
+											className={
+												classes.inventoryWeightBar
+											}
 											color="info"
 											variant="determinate"
 											value={Math.floor(
@@ -504,62 +521,69 @@ export default (props) => {
 										/>
 									</div>
 									<div className={classes.inventoryGrid}>
-										{playerInventory.loaded &&
-											[...Array(playerInventory.size).keys()].map(
-												(value) => {
-													let slot =
-														playerInventory.inventory.filter(
-															(s) =>
-																Boolean(s) &&
-																s.Slot == value + 1,
-														)
-															? playerInventory.inventory.filter(
-																	(s) =>
-																		Boolean(s) &&
-																		s.Slot ==
-																			value + 1,
-															)[0]
-															: {};
-													return (
-														<Slot
-															key={value + 1}
-															onUse={useItem}
-															slot={value + 1}
-															data={slot}
-															owner={
-																playerInventory.owner
-															}
-															invType={
-																playerInventory.invType
-															}
-															shop={false}
-															free={false}
-															hotkeys={true}
-															onContextMenu={(e) => {
-																if (
-																	playerInventory
-																		.disabled[
-																		value + 1
-																	]
-																)
-																	return;
-																onRightClick(
-																	e,
-																	playerInventory.owner,
-																	playerInventory.invType,
-																	false,
-																	false,
-																	slot,
-																);
-															}}
-															locked={
+										{playerLoaded &&
+											[
+												...Array(
+													playerInventory.size,
+												).keys(),
+											].map((value) => {
+												let slot =
+													playerInvSlots.filter(
+														(s) =>
+															Boolean(s) &&
+															s.Slot == value + 1,
+													)
+														? playerInvSlots.filter(
+																(s) =>
+																	Boolean(
+																		s,
+																	) &&
+																	s.Slot ==
+																		value +
+																			1,
+														  )[0]
+														: {};
+												return (
+													<Slot
+														key={value + 1}
+														onUse={useItem}
+														slot={value + 1}
+														data={slot}
+														owner={
+															playerInventory.owner
+														}
+														invType={
+															playerInventory.invType
+														}
+														shop={false}
+														free={false}
+														hotkeys={true}
+														onContextMenu={(e) => {
+															if (
 																playerInventory
-																	.disabled[value + 1]
-															}
-														/>
-													);
-												},
-											)}
+																	.disabled[
+																	value + 1
+																]
+															)
+																return;
+															onRightClick(
+																e,
+																playerInventory.owner,
+																playerInventory.invType,
+																false,
+																false,
+																slot,
+															);
+														}}
+														locked={
+															playerInventory
+																.disabled[
+																value + 1
+															]
+														}
+													/>
+												);
+											})}
 									</div>
 								</div>
 							</div>
@@ -569,10 +593,16 @@ export default (props) => {
 										{secondaryInventory.name}
 									</div>
 									<div className={classes.container}>
-										<div className={classes.inventoryWeight}>
+										<div
+											className={classes.inventoryWeight}
+										>
 											{!secondaryInventory.shop && (
 												<>
-													<div className={classes.weightText}>
+													<div
+														className={
+															classes.weightText
+														}
+													>
 														{`${secondaryWeight.toFixed(
 															2,
 														)} / ${secondaryInventory.capacity.toFixed(
@@ -592,31 +622,35 @@ export default (props) => {
 																		(secondaryWeight /
 																			secondaryInventory.capacity) *
 																			100,
-																)
+																  )
 														}
 													/>
 												</>
 											)}
 										</div>
 										<div className={classes.inventoryGrid}>
-											{secondaryInventory.loaded &&
+											{secondaryLoaded &&
 												[
 													...Array(
 														secondaryInventory.size,
 													).keys(),
 												].map((value) => {
 													let slot =
-														secondaryInventory.inventory.filter(
+														secondaryInvSlots.filter(
 															(s) =>
 																Boolean(s) &&
-																s.Slot == value + 1,
+																s.Slot ==
+																	value + 1,
 														)
-															? secondaryInventory.inventory.filter(
+															? secondaryInvSlots.filter(
 																	(s) =>
-																		Boolean(s) &&
+																		Boolean(
+																			s,
+																		) &&
 																		s.Slot ==
-																			value + 1,
-															)[0]
+																			value +
+																				1,
+															  )[0]
 															: {};
 													return (
 														<Slot
@@ -644,15 +678,18 @@ export default (props) => {
 															slotOverride={
 																secondaryInventory.slotOverride
 															}
-															capacityOverride = {
+															capacityOverride={
 																secondaryInventory.capacityOverride
 															}
 															hotkeys={false}
-															onContextMenu={(e) => {
+															onContextMenu={(
+																e,
+															) => {
 																if (
 																	secondaryInventory
 																		.disabled[
-																		value + 1
+																		value +
+																			1
 																	]
 																)
 																	return;
@@ -669,7 +706,9 @@ export default (props) => {
 															}}
 															locked={
 																secondaryInventory
-																	.disabled[value + 1]
+																	.disabled[
+																	value + 1
+																]
 															}
 														/>
 													);
@@ -687,7 +726,8 @@ export default (props) => {
 											<FontAwesomeIcon
 												icon={[
 													'fas',
-													secondaryInventory.action.icon ||
+													secondaryInventory.action
+														.icon ||
 														'right-from-line',
 												]}
 											/>
