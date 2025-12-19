@@ -1,0 +1,599 @@
+import { useState } from 'react';
+import { Box, LinearProgress, Typography } from '@mui/material';
+import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
+import { inventoryActions } from '../inventorySlice';
+import { getItemImage } from '../../../shared/utils/inventory';
+import { lua2json } from '../../../shared/utils/lua';
+import { rarityColors } from '../../../styles/theme';
+import { Tooltip } from './Tooltip';
+import { SplitDialog } from './SplitDialog';
+import { nuiActions } from '../../../services/nui';
+import type { InventoryItem, ItemMetadata, InventoryType } from '../../../shared/types';
+
+interface SlotProps {
+  slot: number;
+  item: InventoryItem | null;
+  invType: InventoryType;
+  owner: string | number;
+  disabled?: boolean;
+}
+
+export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps) => {
+  const dispatch = useAppDispatch();
+  const { hover, hoverOrigin, items, player, secondary } = useAppSelector(
+    (state) => state.inventory
+  );
+  const [tooltipAnchor, setTooltipAnchor] = useState<HTMLElement | null>(null);
+  const [showSplit, setShowSplit] = useState(false);
+  const [splitPosition, setSplitPosition] = useState({ x: 0, y: 0 });
+
+  const metadata: ItemMetadata = item?.MetaData
+    ? typeof item.MetaData === 'string'
+      ? lua2json(item.MetaData)
+      : item.MetaData
+    : {};
+
+  const itemData = item ? items[item.Name] : null;
+  const isEmpty = !item || !itemData;
+
+  const calcDurability = (): number | null => {
+    if (!item?.CreateDate || !itemData?.durability) return null;
+    return Math.ceil(
+      100 -
+        ((Math.floor(Date.now() / 1000) - (item as any).CreateDate) /
+          itemData.durability) *
+          100
+    );
+  };
+
+  const durability = calcDurability();
+  const isBroken = durability !== null && durability <= 0;
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (disabled) return;
+    if (!item || isEmpty) return;
+
+    // Middle mouse button - Use Item
+    if (e.button === 1) {
+      const isPlayerInventory = invType === player.invType;
+      if (isPlayerInventory && itemData?.isUsable && !isBroken) {
+        nuiActions.frontEndSound('SELECT');
+        nuiActions.useItem({
+          owner: player.owner,
+          slot,
+          invType,
+        });
+        // Disable the slot optimistically while item is being used
+        dispatch(
+          inventoryActions.setPlayerSlotDisabled({
+            slot,
+            disabled: true,
+          })
+        );
+      } else {
+        nuiActions.frontEndSound('DISABLED');
+      }
+      return;
+    }
+
+    // Left mouse button only for dragging
+    if (e.button !== 0) return;
+
+    // Shift+Left-Click - Quick transfer to other inventory
+    if (e.shiftKey && secondary.owner) {
+      const isPlayerInventory = invType === player.invType;
+      const targetInventory = isPlayerInventory ? secondary : player;
+
+      // Block selling to shop
+      if (isPlayerInventory && secondary.shop) {
+        nuiActions.frontEndSound('DISABLED');
+        return;
+      }
+
+      let destSlot: number | null = null;
+      let shouldMerge = false;
+
+      // Try to find existing stackable item first
+      if (itemData?.isStackable) {
+        for (const targetItem of targetInventory.inventory) {
+          if (
+            targetItem &&
+            targetItem.Name === item.Name &&
+            (itemData.isStackable === true ||
+              (typeof itemData.isStackable === 'number' &&
+                targetItem.Count + item.Count <= itemData.isStackable))
+          ) {
+            destSlot = targetItem.Slot;
+            shouldMerge = true;
+            break;
+          }
+        }
+      }
+
+      // If no stackable slot, find first empty slot
+      if (!destSlot) {
+        const occupiedSlots = new Set(
+          targetInventory.inventory.map((item) => item?.Slot).filter(Boolean)
+        );
+        for (let i = 1; i <= targetInventory.size; i++) {
+          if (!occupiedSlots.has(i)) {
+            destSlot = i;
+            break;
+          }
+        }
+      }
+
+      if (destSlot) {
+        nuiActions.frontEndSound('drag');
+
+        if (shouldMerge) {
+          nuiActions.mergeSlot({
+            ownerFrom: isPlayerInventory ? player.owner : secondary.owner,
+            ownerTo: isPlayerInventory ? secondary.owner : player.owner,
+            slotFrom: slot,
+            slotTo: destSlot,
+            name: item.Name,
+            countFrom: item.Count,
+            countTo: item.Count,
+            invTypeFrom: invType,
+            invTypeTo: targetInventory.invType,
+          });
+
+          // Optimistic update
+          if (isPlayerInventory) {
+            dispatch(
+              inventoryActions.mergeItemPlayerToSecondary({
+                originSlot: slot,
+                destSlot,
+                origin: item,
+              })
+            );
+          } else {
+            dispatch(
+              inventoryActions.mergeItemSecondaryToPlayer({
+                originSlot: slot,
+                destSlot,
+                origin: item,
+              })
+            );
+          }
+        } else {
+          nuiActions.moveSlot({
+            ownerFrom: isPlayerInventory ? player.owner : secondary.owner,
+            ownerTo: isPlayerInventory ? secondary.owner : player.owner,
+            slotFrom: slot,
+            slotTo: destSlot,
+            name: item.Name,
+            countFrom: item.Count,
+            countTo: item.Count,
+            invTypeFrom: invType,
+            invTypeTo: targetInventory.invType,
+            isSplit: false,
+          });
+
+          // Optimistic update
+          if (isPlayerInventory) {
+            dispatch(
+              inventoryActions.moveItemPlayerToSecondary({
+                originSlot: slot,
+                destSlot,
+                origin: item,
+              })
+            );
+          } else {
+            dispatch(
+              inventoryActions.moveItemSecondaryToPlayer({
+                originSlot: slot,
+                destSlot,
+                origin: item,
+              })
+            );
+          }
+        }
+      } else {
+        nuiActions.frontEndSound('DISABLED');
+      }
+      return;
+    }
+
+    // Regular drag - Ctrl for half stack
+    const count = e.ctrlKey ? Math.ceil(item.Count / 2) : item.Count;
+
+    dispatch(
+      inventoryActions.setHover({
+        ...item,
+        Count: count,
+        owner,
+        invType,
+      })
+    );
+
+    dispatch(
+      inventoryActions.setHoverOrigin({
+        ...item,
+        slot,
+        owner,
+        invType,
+      })
+    );
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!hover || !hoverOrigin) return;
+    if (e.button !== 0) return;
+
+    // If dropping on same slot, just cancel
+    if (hoverOrigin.Slot === slot && hoverOrigin.invType === invType) {
+      dispatch(inventoryActions.clearHover());
+      return;
+    }
+
+    // Determine origin and destination inventory
+    const isOriginPlayer = hoverOrigin.invType === player.invType;
+    const isDestPlayer = invType === player.invType;
+
+    // Get hover item data
+    const hoverItemData = items[hover.Name];
+    if (!hoverItemData) {
+      dispatch(inventoryActions.clearHover());
+      return;
+    }
+
+    // Play drag sound
+    nuiActions.frontEndSound('drag');
+
+    // Check if we can merge items (same item, stackable, has room)
+    const canMerge =
+      item &&
+      item.Name === hover.Name &&
+      hoverItemData.isStackable &&
+      (hoverItemData.isStackable === true ||
+        (typeof hoverItemData.isStackable === 'number' &&
+          item.Count + hover.Count <= hoverItemData.isStackable));
+
+    // Determine if this is a split operation
+    const isSplit = hoverOrigin.Count !== hover.Count;
+
+    if (canMerge) {
+      // MERGE operation
+      nuiActions.mergeSlot({
+        ownerFrom: isOriginPlayer ? player.owner : secondary.owner,
+        ownerTo: isDestPlayer ? player.owner : secondary.owner,
+        slotFrom: hoverOrigin.Slot,
+        slotTo: slot,
+        name: hover.Name,
+        countFrom: hoverOrigin.Count,
+        countTo: hover.Count,
+        invTypeFrom: hoverOrigin.invType,
+        invTypeTo: invType,
+      });
+
+      // Update local state optimistically
+      if (isOriginPlayer && isDestPlayer) {
+        dispatch(
+          inventoryActions.mergeItemPlayerSame({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      }
+    } else if (item) {
+      // SWAP operation (destination has item)
+      nuiActions.swapSlot({
+        ownerFrom: isOriginPlayer ? player.owner : secondary.owner,
+        ownerTo: isDestPlayer ? player.owner : secondary.owner,
+        slotFrom: hoverOrigin.Slot,
+        slotTo: slot,
+        name: hover.Name,
+        countFrom: hoverOrigin.Count,
+        countTo: hover.Count,
+        invTypeFrom: hoverOrigin.invType,
+        invTypeTo: invType,
+      });
+
+      // Update local state optimistically
+      if (isOriginPlayer && isDestPlayer) {
+        dispatch(
+          inventoryActions.swapItemPlayerSame({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      }
+    } else {
+      // MOVE operation (destination is empty)
+      nuiActions.moveSlot({
+        ownerFrom: isOriginPlayer ? player.owner : secondary.owner,
+        ownerTo: isDestPlayer ? player.owner : secondary.owner,
+        slotFrom: hoverOrigin.Slot,
+        slotTo: slot,
+        name: hover.Name,
+        countFrom: hoverOrigin.Count,
+        countTo: hover.Count,
+        invTypeFrom: hoverOrigin.invType,
+        invTypeTo: invType,
+        isSplit,
+      });
+
+      // Update local state optimistically
+      if (isOriginPlayer && isDestPlayer) {
+        dispatch(
+          inventoryActions.moveItemPlayerSame({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      }
+    }
+
+    dispatch(inventoryActions.clearHover());
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (disabled) return;
+    if (!item || isEmpty || hoverOrigin) return;
+
+    // Shift+Right-Click - Open split dialog
+    if (e.shiftKey && itemData?.isStackable && item.Count > 1) {
+      setSplitPosition({ x: e.clientX, y: e.clientY });
+      setShowSplit(true);
+      return;
+    }
+
+    // Ctrl+Right-Click - Start dragging single item
+    if (e.ctrlKey) {
+      dispatch(
+        inventoryActions.setHover({
+          ...item,
+          Count: 1,
+          owner,
+          invType,
+        })
+      );
+      dispatch(
+        inventoryActions.setHoverOrigin({
+          ...item,
+          owner,
+          invType,
+        })
+      );
+      return;
+    }
+
+    // Regular Right-Click - Start dragging half stack
+    const count = item.Count > 1 ? Math.ceil(item.Count / 2) : item.Count;
+    dispatch(
+      inventoryActions.setHover({
+        ...item,
+        Count: count,
+        owner,
+        invType,
+      })
+    );
+    dispatch(
+      inventoryActions.setHoverOrigin({
+        ...item,
+        slot,
+        owner,
+        invType,
+      })
+    );
+  };
+
+  const handleSplitDrag = (amount: number) => {
+    if (!item) return;
+
+    dispatch(
+      inventoryActions.setHover({
+        ...item,
+        Count: amount,
+        owner,
+        invType,
+      })
+    );
+    dispatch(
+      inventoryActions.setHoverOrigin({
+        ...item,
+        slot,
+        owner,
+        invType,
+      })
+    );
+    setShowSplit(false);
+  };
+
+  const getDurabilityColor = () => {
+    if (!durability) return '#0FC6A6';
+    if (durability >= 75) return '#0FC6A6';
+    if (durability >= 50) return '#f09348';
+    return '#6e1616';
+  };
+
+  const isBeingDragged = hover && hoverOrigin?.Slot === slot && hoverOrigin?.invType === invType;
+
+  return (
+    <>
+      <Box
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={(e) => !isEmpty && setTooltipAnchor(e.currentTarget)}
+        onMouseLeave={() => setTooltipAnchor(null)}
+        sx={{
+        width: '100%',
+        height: '125px',
+        background: isBroken
+          ? 'linear-gradient(rgba(99, 35, 35, 0.8), 25%, rgba(99, 35, 35, 0.4))'
+          : 'rgba(17, 49, 80, 0.330)',
+        border: `0.15px solid ${
+          itemData ? `${rarityColors[itemData.rarity]}40` : '#0101064b'
+        }`,
+        borderRadius: '6px',
+        position: 'relative',
+        opacity: isBeingDragged ? 0.35 : 1,
+        transition: 'opacity ease-in 0.15s, background ease-in 0.15s',
+        cursor: !isEmpty ? 'pointer' : 'default',
+        '&:hover': {
+          background: !isEmpty && !isBroken
+            ? '#0c0c0c9e'
+            : isBroken
+            ? 'linear-gradient(rgba(99, 35, 35, 1), 25%, rgba(99, 35, 35, 0.6))'
+            : undefined,
+        },
+      }}
+    >
+      {!isEmpty && itemData && (
+        <>
+          <Box
+            sx={{
+              height: '125px',
+              width: '100%',
+              backgroundImage: `url(${getItemImage(
+                metadata.CustomItemImage || item.Name
+              )})`,
+              backgroundSize: '55%',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center center',
+            }}
+          />
+
+          <Typography
+            sx={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              padding: '0 5px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              zIndex: 4,
+            }}
+          >
+            {item.Count > 1 ? item.Count : ''}
+          </Typography>
+
+          <Typography
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '100%',
+              textAlign: 'center',
+              padding: '2px 5px',
+              fontSize: '12px',
+              background: 'rgba(12,24,38, 0.733)',
+              borderTop: '1px solid rgb(255 255 255 / 4%)',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
+              zIndex: 4,
+            }}
+          >
+            {metadata.CustomItemLabel || itemData.label}
+          </Typography>
+
+          {durability !== null && durability > 0 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: '25px',
+                left: 0,
+                width: '100%',
+                height: '4px',
+                zIndex: 4,
+              }}
+            >
+              <LinearProgress
+                variant="determinate"
+                value={durability}
+                sx={{
+                  height: '100%',
+                  backgroundColor: 'transparent',
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: getDurabilityColor(),
+                    transition: 'none',
+                  },
+                }}
+              />
+            </Box>
+          )}
+
+          {isBroken && (
+            <Typography
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: '#fff',
+                textShadow: '0 0 10px rgba(0,0,0,0.8)',
+                zIndex: 5,
+              }}
+            >
+              BROKEN
+            </Typography>
+          )}
+
+          {slot <= 5 && (
+            <Typography
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                padding: '0 5px',
+                width: '20px',
+                fontSize: '12px',
+                color: '#9CE60D',
+                background: 'rgba(12,24,38, 0.733)',
+                borderRight: '1px solid rgb(255 255 255 / 4%)',
+                borderBottom: '1px solid rgb(255 255 255 / 4%)',
+                borderBottomRightRadius: '5px',
+                borderTopLeftRadius: '5px',
+                zIndex: 4,
+              }}
+            >
+              {slot}
+            </Typography>
+          )}
+        </>
+      )}
+
+      {isEmpty && (
+        <Typography
+          variant="caption"
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            color: 'text.secondary',
+          }}
+        >
+          {slot}
+        </Typography>
+      )}
+    </Box>
+
+    <Tooltip
+      item={item}
+      anchorEl={tooltipAnchor}
+      onClose={() => setTooltipAnchor(null)}
+    />
+
+    <SplitDialog
+      open={showSplit}
+      item={item}
+      anchorPosition={splitPosition}
+      onClose={() => setShowSplit(false)}
+      onSplit={handleSplitDrag}
+    />
+    </>
+  );
+};
