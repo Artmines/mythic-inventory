@@ -279,6 +279,22 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
             origin: hover,
           })
         );
+      } else if (isOriginPlayer && !isDestPlayer) {
+        dispatch(
+          inventoryActions.mergeItemPlayerToSecondary({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      } else if (!isOriginPlayer && isDestPlayer) {
+        dispatch(
+          inventoryActions.mergeItemSecondaryToPlayer({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
       }
     } else if (item) {
       // SWAP operation (destination has item)
@@ -298,6 +314,22 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
       if (isOriginPlayer && isDestPlayer) {
         dispatch(
           inventoryActions.swapItemPlayerSame({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      } else if (isOriginPlayer && !isDestPlayer) {
+        dispatch(
+          inventoryActions.swapItemPlayerToSecondary({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      } else if (!isOriginPlayer && isDestPlayer) {
+        dispatch(
+          inventoryActions.swapItemSecondaryToPlayer({
             originSlot: hoverOrigin.Slot,
             destSlot: slot,
             origin: hover,
@@ -323,6 +355,22 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
       if (isOriginPlayer && isDestPlayer) {
         dispatch(
           inventoryActions.moveItemPlayerSame({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      } else if (isOriginPlayer && !isDestPlayer) {
+        dispatch(
+          inventoryActions.moveItemPlayerToSecondary({
+            originSlot: hoverOrigin.Slot,
+            destSlot: slot,
+            origin: hover,
+          })
+        );
+      } else if (!isOriginPlayer && isDestPlayer) {
+        dispatch(
+          inventoryActions.moveItemSecondaryToPlayer({
             originSlot: hoverOrigin.Slot,
             destSlot: slot,
             origin: hover,

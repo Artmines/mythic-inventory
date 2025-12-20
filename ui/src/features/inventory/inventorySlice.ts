@@ -188,15 +188,47 @@ const inventorySlice = createSlice({
       state.staticTooltip = action.payload;
     },
 
-    setPlayerSlotDisabled: (state, action: PayloadAction<{ slot: number; disabled: boolean }>) => {
+    setPlayerSlotDisabled: (state, action: PayloadAction<{ slot: number; disabled: boolean; itemData?: InventoryItem | null }>) => {
       state.player.disabled[action.payload.slot] = action.payload.disabled;
+
+      // Update slot data if provided
+      if (action.payload.itemData !== undefined) {
+        if (action.payload.itemData === null) {
+          // Remove item from slot
+          state.player.inventory = state.player.inventory.filter(item => item?.Slot !== action.payload.slot);
+        } else {
+          // Update or add item
+          const existingIndex = state.player.inventory.findIndex(item => item?.Slot === action.payload.slot);
+          if (existingIndex >= 0) {
+            state.player.inventory[existingIndex] = action.payload.itemData;
+          } else {
+            state.player.inventory.push(action.payload.itemData);
+          }
+        }
+      }
     },
 
     setSecondarySlotDisabled: (
       state,
-      action: PayloadAction<{ slot: number; disabled: boolean }>
+      action: PayloadAction<{ slot: number; disabled: boolean; itemData?: InventoryItem | null }>
     ) => {
       state.secondary.disabled[action.payload.slot] = action.payload.disabled;
+
+      // Update slot data if provided
+      if (action.payload.itemData !== undefined) {
+        if (action.payload.itemData === null) {
+          // Remove item from slot
+          state.secondary.inventory = state.secondary.inventory.filter(item => item?.Slot !== action.payload.slot);
+        } else {
+          // Update or add item
+          const existingIndex = state.secondary.inventory.findIndex(item => item?.Slot === action.payload.slot);
+          if (existingIndex >= 0) {
+            state.secondary.inventory[existingIndex] = action.payload.itemData;
+          } else {
+            state.secondary.inventory.push(action.payload.itemData);
+          }
+        }
+      }
     },
 
     moveItemPlayerSame: (state, action: PayloadAction<MoveItemPayload>) => {
@@ -243,26 +275,93 @@ const inventorySlice = createSlice({
       state.player.disabled[destSlot] = true;
     },
 
+    swapItemPlayerToSecondary: (state, action: PayloadAction<MoveItemPayload>) => {
+      const { originSlot, destSlot } = action.payload;
+      // Get the items to swap
+      const originItem = state.player.inventory.find((item) => item?.Slot === originSlot);
+      const destItem = state.secondary.inventory.find((item) => item?.Slot === destSlot);
+
+      if (originItem && destItem) {
+        // Remove origin from player, add dest to player (with origin slot)
+        state.player.inventory = [
+          ...state.player.inventory.filter((item) => item?.Slot !== originSlot),
+          { ...destItem, Slot: originSlot },
+        ];
+
+        // Remove dest from secondary, add origin to secondary (with dest slot)
+        state.secondary.inventory = [
+          ...state.secondary.inventory.filter((item) => item?.Slot !== destSlot),
+          { ...originItem, Slot: destSlot },
+        ];
+
+        state.player.disabled[originSlot] = true;
+        state.secondary.disabled[destSlot] = true;
+      }
+    },
+
+    swapItemSecondaryToPlayer: (state, action: PayloadAction<MoveItemPayload>) => {
+      const { originSlot, destSlot } = action.payload;
+      // Get the items to swap
+      const originItem = state.secondary.inventory.find((item) => item?.Slot === originSlot);
+      const destItem = state.player.inventory.find((item) => item?.Slot === destSlot);
+
+      if (originItem && destItem) {
+        // Remove origin from secondary, add dest to secondary (with origin slot)
+        state.secondary.inventory = [
+          ...state.secondary.inventory.filter((item) => item?.Slot !== originSlot),
+          { ...destItem, Slot: originSlot },
+        ];
+
+        // Remove dest from player, add origin to player (with dest slot)
+        state.player.inventory = [
+          ...state.player.inventory.filter((item) => item?.Slot !== destSlot),
+          { ...originItem, Slot: destSlot },
+        ];
+
+        state.secondary.disabled[originSlot] = true;
+        state.player.disabled[destSlot] = true;
+      }
+    },
+
     moveItemSecondaryToPlayer: (state, action: PayloadAction<MoveItemPayload>) => {
-      const { destSlot, origin } = action.payload;
+      const { originSlot, destSlot, origin } = action.payload;
+      // Remove from secondary inventory
+      state.secondary.inventory = state.secondary.inventory.filter(
+        (item) => item?.Slot !== originSlot
+      );
+      // Add to player inventory
       state.player.inventory.push({
         ...origin,
         Slot: destSlot,
       });
       state.player.disabled[destSlot] = true;
+      state.secondary.disabled[originSlot] = true;
     },
 
     moveItemPlayerToSecondary: (state, action: PayloadAction<MoveItemPayload>) => {
-      const { destSlot, origin } = action.payload;
+      const { originSlot, destSlot, origin } = action.payload;
+      // Remove from player inventory
+      state.player.inventory = state.player.inventory.filter(
+        (item) => item?.Slot !== originSlot
+      );
+      // Add to secondary inventory
       state.secondary.inventory.push({
         ...origin,
         Slot: destSlot,
       });
       state.secondary.disabled[destSlot] = true;
+      state.player.disabled[originSlot] = true;
     },
 
     mergeItemSecondaryToPlayer: (state, action: PayloadAction<MoveItemPayload>) => {
-      const { destSlot, origin } = action.payload;
+      const { originSlot, destSlot, origin } = action.payload;
+      // Remove from secondary inventory (unless it's a shop)
+      if (!origin.shop) {
+        state.secondary.inventory = state.secondary.inventory.filter(
+          (item) => item?.Slot !== originSlot
+        );
+      }
+      // Add count to player inventory
       state.player.inventory = state.player.inventory.map((item) => {
         if (item?.Slot === destSlot) {
           return { ...item, Count: item.Count + origin.Count };
@@ -270,10 +369,16 @@ const inventorySlice = createSlice({
         return item;
       });
       state.player.disabled[destSlot] = true;
+      state.secondary.disabled[originSlot] = true;
     },
 
     mergeItemPlayerToSecondary: (state, action: PayloadAction<MoveItemPayload>) => {
-      const { destSlot, origin } = action.payload;
+      const { originSlot, destSlot, origin } = action.payload;
+      // Remove from player inventory
+      state.player.inventory = state.player.inventory.filter(
+        (item) => item?.Slot !== originSlot
+      );
+      // Add count to secondary inventory
       state.secondary.inventory = state.secondary.inventory.map((item) => {
         if (item?.Slot === destSlot) {
           return { ...item, Count: item.Count + origin.Count };
@@ -281,6 +386,7 @@ const inventorySlice = createSlice({
         return item;
       });
       state.secondary.disabled[destSlot] = true;
+      state.player.disabled[originSlot] = true;
     },
 
     setEquipment: (state, action: PayloadAction<{ inventory: InventoryItem[] }>) => {

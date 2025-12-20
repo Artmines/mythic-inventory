@@ -1,5 +1,23 @@
 local _energyCd = false
 
+AddEventHandler("ItemUses:Shared:DependencyUpdate", RetrieveItemUsesComponents)
+function RetrieveItemUsesComponents()
+	Animations = exports["mythic-base"]:FetchComponent("Animations")
+	Sounds = exports["mythic-base"]:FetchComponent("Sounds")
+end
+
+AddEventHandler("Core:Shared:Ready", function()
+	exports["mythic-base"]:RequestDependencies("ItemUses", {
+		"Animations",
+		"Sounds",
+	}, function(error)
+		if #error > 0 then
+			return
+		end
+		RetrieveItemUsesComponents()
+	end)
+end)
+
 function RegisterRandomItems() end
 
 function RunSpeed(modifier, duration, cd, ss)

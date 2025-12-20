@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { CraftingState, Recipe, CraftingProgress } from '../../shared/types';
+import type { CraftingState, Recipe } from '../../shared/types';
 
 const initialState: CraftingState = {
   currentCraft: 1,
@@ -35,7 +35,7 @@ const craftingSlice = createSlice({
       state.actionString = action.payload.actionString;
     },
 
-    setCrafting: (state, action: PayloadAction<Omit<CraftingProgress, 'progress'>>) => {
+    setCrafting: (state, action: PayloadAction<{ recipe: string; start: number; time: number }>) => {
       state.crafting = {
         ...action.payload,
         progress: 0,
@@ -58,6 +58,10 @@ const craftingSlice = createSlice({
 
     clearRecipes: (state) => {
       state.recipes = [];
+    },
+
+    updateCounts: (state, action: PayloadAction<Record<string, number>>) => {
+      state.myCounts = action.payload;
     },
   },
 });

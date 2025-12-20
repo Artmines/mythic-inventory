@@ -12,7 +12,9 @@ export interface Recipe {
 }
 
 export interface CraftingProgress {
-  recipe: Recipe;
+  recipe: string;
+  start: number;
+  time: number;
   progress: number;
 }
 

@@ -53,4 +53,7 @@ export const nuiActions = {
   moveSlot: (data: unknown) => nui.send('MoveSlot', data),
   useItem: (data: unknown) => nui.send('UseItem', data),
   sendNotify: (message: string) => nui.send('SendNotify', { message }),
+  craftItem: (data: { bench: string; qty: number; result: string }) => nui.send('Crafting:Craft', data),
+  craftCancel: () => nui.send('Crafting:Cancel'),
+  craftEnd: (recipe: string) => nui.send('Crafting:End', recipe),
 };

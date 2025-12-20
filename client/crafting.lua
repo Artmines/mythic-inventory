@@ -1,3 +1,27 @@
+AddEventHandler("Crafting:Shared:DependencyUpdate", RetrieveCraftingComponents)
+function RetrieveCraftingComponents()
+	Callbacks = exports["mythic-base"]:FetchComponent("Callbacks")
+	Animations = exports["mythic-base"]:FetchComponent("Animations")
+	Progress = exports["mythic-base"]:FetchComponent("Progress")
+	Notification = exports["mythic-base"]:FetchComponent("Notification")
+	Targeting = exports["mythic-base"]:FetchComponent("Targeting")
+end
+
+AddEventHandler("Core:Shared:Ready", function()
+	exports["mythic-base"]:RequestDependencies("Crafting", {
+		"Callbacks",
+		"Animations",
+		"Progress",
+		"Notification",
+		"Targeting",
+	}, function(error)
+		if #error > 0 then
+			return
+		end
+		RetrieveCraftingComponents()
+	end)
+end)
+
 CRAFTING = {
 	Benches = {
 		Open = function(self, bench)

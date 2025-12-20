@@ -8,6 +8,7 @@ import { craftingActions } from './features/crafting/craftingSlice';
 import { Inventory } from './features/inventory/components/Inventory';
 import { HoverSlot } from './features/inventory/components/HoverSlot';
 import { Hotbar } from './features/hotbar/components/Hotbar';
+import { Crafting, Process } from './features/crafting/components';
 import { nuiActions } from './services/nui';
 import type { NUIMessage } from './shared/types';
 
@@ -26,7 +27,7 @@ function App() {
           dispatch(craftingActions.clearRecipes());
           break;
         case 'SET_MODE':
-          dispatch(appActions.setMode(message.data as 'inventory' | 'crafting'));
+          dispatch(appActions.setMode((message.data as any)?.mode || 'inventory'));
           break;
         case 'SET_PLAYER_INVENTORY':
           dispatch(inventoryActions.setPlayerInventory(message.data as any));
@@ -45,6 +46,7 @@ function App() {
             inventoryActions.setPlayerSlotDisabled({
               slot: (message.data as any).slot,
               disabled: false,
+              itemData: (message.data as any).itemData,
             })
           );
           break;
@@ -53,6 +55,7 @@ function App() {
             inventoryActions.setSecondarySlotDisabled({
               slot: (message.data as any).slot,
               disabled: false,
+              itemData: (message.data as any).itemData,
             })
           );
           break;
@@ -73,6 +76,7 @@ function App() {
           break;
         case 'HOTBAR_SHOW':
           dispatch(appActions.showHotbar());
+          dispatch(appActions.setHotbarItems((message.data as any).items || []));
           break;
         case 'HOTBAR_HIDE':
           dispatch(appActions.hideHotbar());
@@ -124,6 +128,9 @@ function App() {
         case 'CURRENT_CRAFT':
           dispatch(craftingActions.setCurrentCraft((message.data as any).currentCraft));
           break;
+        case 'UPDATE_CRAFTING_COUNTS':
+          dispatch(craftingActions.updateCounts((message.data as any).myCounts));
+          break;
       }
     },
     [dispatch]
@@ -151,6 +158,8 @@ function App() {
   }, [dispatch]);
 
   const hidden = useAppSelector((state) => state.app.hidden);
+  const mode = useAppSelector((state) => state.app.mode);
+  const crafting = useAppSelector((state) => state.crafting.crafting);
 
   return (
     <ThemeProvider theme={theme}>
@@ -165,9 +174,11 @@ function App() {
           backgroundColor: 'transparent',
         }}
       >
-        {!hidden && <Inventory />}
-        <HoverSlot />
+        {!hidden && mode === 'inventory' && <Inventory />}
+        {!hidden && mode === 'crafting' && <Crafting />}
+        {mode === 'inventory' && <HoverSlot />}
         <Hotbar />
+        {Boolean(crafting) && <Process crafting={crafting} />}
       </Box>
     </ThemeProvider>
   );
