@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import { theme } from './styles/theme';
 import { useAppDispatch, useAppSelector } from './shared/hooks';
@@ -9,11 +9,14 @@ import { Inventory } from './features/inventory/components/Inventory';
 import { HoverSlot } from './features/inventory/components/HoverSlot';
 import { Hotbar } from './features/hotbar/components/Hotbar';
 import { Crafting, Process } from './features/crafting/components';
+import { DevModeButton } from './features/inventory/components/DevModeButton';
+import { DevModePopup } from './features/inventory/components/DevModePopup';
 import { nuiActions } from './services/nui';
 import type { NUIMessage } from './shared/types';
 
 function App() {
   const dispatch = useAppDispatch();
+  const [devPopupOpen, setDevPopupOpen] = useState(false);
 
   const handleNUIMessage = useCallback(
     (message: NUIMessage) => {
@@ -179,6 +182,8 @@ function App() {
         {mode === 'inventory' && <HoverSlot />}
         <Hotbar />
         {Boolean(crafting) && <Process crafting={crafting} />}
+        <DevModeButton onClick={() => setDevPopupOpen(true)} />
+        <DevModePopup open={devPopupOpen} onClose={() => setDevPopupOpen(false)} />
       </Box>
     </ThemeProvider>
   );
