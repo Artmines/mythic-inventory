@@ -47,6 +47,7 @@ export const SplitDialog = ({
     <Menu
       open={open}
       onClose={onClose}
+      disableEscapeKeyDown
       onContextMenu={(e) => {
         e.preventDefault();
         onClose();

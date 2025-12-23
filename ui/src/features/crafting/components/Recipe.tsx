@@ -161,6 +161,7 @@ export const Recipe = ({ index, recipe, cooldown }: RecipeProps) => {
           horizontal: 'center',
         }}
         onClose={resultTPClose}
+        disableEscapeKeyDown
         disableRestoreFocus
       >
         <Tooltip item={craftItemData} count={recipe.result.count} />

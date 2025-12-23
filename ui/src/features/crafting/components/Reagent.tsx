@@ -159,6 +159,7 @@ export const Reagent = ({ item, qty }: ReagentProps) => {
           horizontal: 'center',
         }}
         onClose={tooltipClose}
+        disableEscapeKeyDown
         disableRestoreFocus
       >
         <Tooltip item={itemData} count={item.count} />

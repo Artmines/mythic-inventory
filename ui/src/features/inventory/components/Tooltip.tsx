@@ -101,6 +101,7 @@ export const Tooltip = ({ item, anchorEl, onClose }: TooltipProps) => {
       open={Boolean(anchorEl)}
       anchorEl={anchorEl}
       onClose={onClose}
+      disableEscapeKeyDown
       anchorOrigin={{
         vertical: 'bottom',
         horizontal: 'right',
