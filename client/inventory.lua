@@ -136,7 +136,7 @@ AddEventHandler("Core:Shared:Ready", function()
 						disableCombat = item.pbConfig.disableCombat,
 					},
 				}, function(cancelled)
-					Animations.Emotes:CancelEmote()
+					Animations.Emotes:ForceCancel()
 					cb(not cancelled)
 				end)
 			else
