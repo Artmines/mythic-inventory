@@ -205,6 +205,22 @@ export const Tooltip = ({ item, anchorEl, onClose }: TooltipProps) => {
               Durability: {Math.max(durability, 0)}%
             </Typography>
           )}
+
+          {!isNaN(item.Quality ?? NaN) && (item.Quality ?? 0) > 0 && (
+            <Typography
+              variant="body2"
+              sx={{
+                color:
+                  (item.Quality ?? 0) >= 75
+                    ? 'success.light'
+                    : (item.Quality ?? 0) >= 50
+                    ? 'warning.light'
+                    : 'error.light',
+              }}
+            >
+              Quality: {item.Quality}%
+            </Typography>
+          )}
         </Box>
 
         {metadata && Object.keys(metadata).length > 0 && (

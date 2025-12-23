@@ -1,6 +1,5 @@
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   Button,
   Box,
@@ -107,6 +106,7 @@ export const DevModePopup = ({ open, onClose }: DevModePopupProps) => {
         capacity: 100,
         owner: 'ground-123',
         size: 50,
+        disabled: {},
       })
     );
     dispatch(inventoryActions.showSecondaryInventory());
@@ -190,7 +190,6 @@ export const DevModePopup = ({ open, onClose }: DevModePopupProps) => {
         recipes: [
           {
             id: 'lockpick',
-            label: 'Lockpick',
             time: 5000,
             result: { name: 'lockpick', count: 1 },
             items: [
@@ -200,7 +199,6 @@ export const DevModePopup = ({ open, onClose }: DevModePopupProps) => {
           },
           {
             id: 'bandage',
-            label: 'Bandage',
             time: 3000,
             result: { name: 'bandage', count: 1 },
             items: [
@@ -269,15 +267,17 @@ export const DevModePopup = ({ open, onClose }: DevModePopupProps) => {
     dispatch(
       inventoryActions.setSecondaryInventory({
         inventory: [
-          { Name: 'burger', Slot: 1, Count: 999, Quality: 100, price: 10 },
-          { Name: 'water', Slot: 2, Count: 999, Quality: 100, price: 5 },
-          { Name: 'bandage', Slot: 3, Count: 999, Quality: 100, price: 15 },
+          { Name: 'burger', Slot: 1, Count: 999, Quality: 100, Price: 10 },
+          { Name: 'water', Slot: 2, Count: 999, Quality: 100, Price: 5 },
+          { Name: 'bandage', Slot: 3, Count: 999, Quality: 100, Price: 15 },
         ],
         name: '24/7 Store',
         invType: 10,
         capacity: 0,
         owner: 'shop-247',
         size: 25,
+        disabled: {},
+        shop: true,
       })
     );
     dispatch(inventoryActions.showSecondaryInventory());

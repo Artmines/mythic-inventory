@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { inventoryActions } from '../inventorySlice';
 import { getItemImage } from '../../../shared/utils/inventory';
 import { lua2json } from '../../../shared/utils/lua';
+import { formatThousands } from '../../../shared/utils/formatters';
 import { rarityColors } from '../../../styles/theme';
 import { Tooltip } from './Tooltip';
 import { SplitDialog } from './SplitDialog';
@@ -589,7 +590,7 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
             </Typography>
           )}
 
-          {slot <= 5 && (
+          {slot <= 5 && !secondary.shop && (
             <Typography
               sx={{
                 position: 'absolute',
@@ -610,22 +611,64 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
               {slot}
             </Typography>
           )}
-        </>
-      )}
 
-      {isEmpty && (
-        <Typography
-          variant="caption"
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: 'text.secondary',
-          }}
-        >
-          {slot}
-        </Typography>
+          {secondary.shop && owner === secondary.owner && invType === secondary.invType && (
+            <>
+              {item.Price === 0 ? (
+                <Typography
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    padding: '0 5px',
+                    fontSize: '12px',
+                    color: 'success.main',
+                    zIndex: 4,
+                  }}
+                >
+                  FREE
+                </Typography>
+              ) : (
+                <Typography
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    padding: '0 5px',
+                    fontSize: '12px',
+                    color: 'success.main',
+                    zIndex: 4,
+                    '&::before': {
+                      content: '"$"',
+                      marginRight: '2px',
+                      color: 'text.primary',
+                    },
+                  }}
+                >
+                  {formatThousands((item.Price ?? itemData?.price ?? 0) * item.Count)}
+                  {item.Count > 1 && (
+                    <Typography
+                      component="span"
+                      sx={{
+                        marginLeft: '5px',
+                        fontSize: '10px',
+                        color: 'text.secondary',
+                        '&::before': {
+                          content: '"($"',
+                        },
+                        '&::after': {
+                          content: '")"',
+                        },
+                      }}
+                    >
+                      {formatThousands(item.Price ?? itemData?.price ?? 0)}
+                    </Typography>
+                  )}
+                </Typography>
+              )}
+            </>
+          )}
+        </>
       )}
     </Box>
 

@@ -23,6 +23,7 @@ export interface InventoryItem {
   Name: string;
   Slot: number;
   Count: number;
+  Quality?: number;
   MetaData?: ItemMetadata;
   CreateDate?: number;
   Price?: number;
