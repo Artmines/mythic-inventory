@@ -312,8 +312,10 @@ function LoadShops()
 			shopLocations[string.format("shop:%s", id)] = v
 		end
 
-		for k, v in pairs(_entityTypes) do
-			storeBankAccounts[v.id] = f.Account
+		if f then
+			for k, v in pairs(_entityTypes) do
+				storeBankAccounts[v.id] = f.Account
+			end
 		end
 
 		Database.Game:find({
@@ -395,7 +397,7 @@ function RegisterCommands()
 			return
 		end
 		local char = player:GetData("Character")
-		MySQL.query.await("DELETE FROM inventory WHERE name = ?", { string.format("%s-%s", char:GetData("SID"), 1) })		
+		MySQL.query.await("DELETE FROM inventory WHERE name = ?", { string.format("%s-%s", char:GetData("SID"), 1) })
 		Execute:Client(
 			char:GetData("Source"),
 			"Notification",
@@ -467,9 +469,11 @@ function RegisterCommands()
 			if itemExist then
 				if itemExist.type ~= 2 then
 					Inventory:AddItem(char:GetData("SID"), args[2], tonumber(args[3]), {}, 1)
-					Execute:Client(source, "Notification", "Success", "You gave " .. args[3] .. "x " .. args[2] .. " to " .. tostring(char:GetData("SID")))
+					Execute:Client(source, "Notification", "Success",
+						"You gave " .. args[3] .. "x " .. args[2] .. " to " .. tostring(char:GetData("SID")))
 				else
-					Execute:Client(source, "Notification", "Error", "You can only give items with this command, try /giveweapon")
+					Execute:Client(source, "Notification", "Error",
+						"You can only give items with this command, try /giveweapon")
 				end
 			else
 				Execute:Client(source, "Notification", "Error", "Item not located")
@@ -531,9 +535,11 @@ function RegisterCommands()
 							1
 						)
 					end
-					Execute:Client(source, "Notification", "Success", "You gave weapon " .. weapon .. " to " .. tostring(char:GetData("SID")))
+					Execute:Client(source, "Notification", "Success",
+						"You gave weapon " .. weapon .. " to " .. tostring(char:GetData("SID")))
 				else
-					Execute:Client(source, "Notification", "Error", "You can only give weapons with this command, try /giveitem")
+					Execute:Client(source, "Notification", "Error",
+						"You can only give weapons with this command, try /giveitem")
 				end
 			else
 				Execute:Client(source, "Notification", "Error", "Weapon not located")
@@ -556,7 +562,8 @@ function RegisterCommands()
 			},
 			{
 				name = "Is Scratched?",
-				help = "Whether to spawn with a normal serial number registered to you, or a scratched serial number (1 = true, 0 = false).",
+				help =
+				"Whether to spawn with a normal serial number registered to you, or a scratched serial number (1 = true, 0 = false).",
 			},
 		},
 	}, 4)
