@@ -136,7 +136,11 @@ AddEventHandler("Core:Shared:Ready", function()
 						disableCombat = item.pbConfig.disableCombat,
 					},
 				}, function(cancelled)
-					Animations.Emotes:ForceCancel()
+					pcall(function()
+					if Animations and Animations.Emotes then
+						Animations.Emotes:ForceCancel()
+					end
+				end)
 					cb(not cancelled)
 				end)
 			else
@@ -174,6 +178,30 @@ end)
 
 RegisterNetEvent("Inventory:Client:Cache", function(inventory, refresh)
 	_cachedInventory = inventory
+
+	-- Send fresh inventory to NUI if it's open
+	if LocalPlayer.state.inventoryOpen then
+		SendNUIMessage({
+			type = "SET_PLAYER_INVENTORY",
+			data = inventory,
+		})
+	end
+
+	-- Update crafting counts if crafting UI is open
+	if LocalPlayer.state.craftingOpen then
+		local counts = {}
+		for _, item in ipairs(inventory.inventory or {}) do
+			if item and item.Name then
+				counts[item.Name] = (counts[item.Name] or 0) + item.Count
+			end
+		end
+		SendNUIMessage({
+			type = "UPDATE_CRAFTING_COUNTS",
+			data = {
+				myCounts = counts,
+			},
+		})
+	end
 
 	if refresh then
 		TriggerEvent("Weapons:Client:Attach")
@@ -354,11 +382,12 @@ INVENTORY = {
 					data = data,
 				})
 			end,
-			Slot = function(self, slot)
+			Slot = function(self, slot, itemData)
 				SendNUIMessage({
 					type = "SET_PLAYER_SLOT",
 					data = {
 						slot = slot,
+						itemData = itemData,
 					},
 				})
 			end,
@@ -374,11 +403,12 @@ INVENTORY = {
 					data = data,
 				})
 			end,
-			Slot = function(self, slot)
+			Slot = function(self, slot, itemData)
 				SendNUIMessage({
 					type = "SET_SECONDARY_SLOT",
 					data = {
 						slot = slot,
+						itemData = itemData,
 					},
 				})
 			end,
@@ -704,11 +734,11 @@ RegisterNetEvent("Inventory:Container:Remove", function(data, from)
 	end
 end)
 
-RegisterNetEvent("Inventory:Client:SetSlot", function(owner, type, slot)
+RegisterNetEvent("Inventory:Client:SetSlot", function(owner, type, slot, data)
 	if SecondInventory?.owner == owner and SecondInventory?.invType == type then
-		Inventory.Set.Secondary:Slot(slot)
+		Inventory.Set.Secondary:Slot(slot, data)
 	else
-		Inventory.Set.Player:Slot(slot)
+		Inventory.Set.Player:Slot(slot, data)
 	end
 end)
 
