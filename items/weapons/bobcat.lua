@@ -1,10 +1,10 @@
 _itemsSource["weapons_bobcat"] = {
 	{
-		name = "BOBCAT_Glizz",
-		label = "Glizzy",
-		weapon = "WEAPON_GLOCK19X2",
+		name = "BOBCAT_57",
+		label = "Five Seven",
+		weapon = "WEAPON_57",
 		ammoType = "AMMO_PISTOL",
-		iconOverride = "WEAPON_GLOCK19X2",
+		iconOverride = "WEAPON_57",
 		requiresLicense = true,
 		price = 10000,
 		isUsable = true,
@@ -111,7 +111,7 @@ _itemsSource["weapons_bobcat"] = {
 		isRemoved = false,
 		isStackable = false,
 		isDestroyed = false,
-		durability = (60 * 60 * 3),
+		durability = (60 * 60 * 24 * 7),
 		type = 2,
 		rarity = 2,
 		closeUi = true,

@@ -263,10 +263,11 @@ _itemsSource["french_bakery"] = {
 			max = 10,
 		}
 	},
+
 	{
 		name = "donut_stack",
 		label = "Stack of Donuts",
-		price = 250,
+		price = 50,
 		isUsable = true,
 		isRemoved = true,
 		isStackable = 25,
@@ -281,53 +282,8 @@ _itemsSource["french_bakery"] = {
 		},
 		stressTicks = { "3", "3", "3", "3", "3" },
 		animConfig = {
-			anim = "donut",
+			anim = "eat",
 			time = 5000,
-			pbConfig = {
-				label = "Eating",
-				useWhileDead = false,
-				canCancel = true,
-				vehicle = false,
-				disarm = true,
-				ignoreModifier = true,
-				disableMovement = false,
-				disableCarMovement = false,
-				disableMouse = false,
-				disableCombat = true,
-			},
-		},
-		metalic = false,
-		isDestroyed = true,
-		durability = (60 * 60 * 24 * 5),
-		energyModifier = {
-			modifier = 1.15,
-			duration = 6, -- not seconds?
-			cooldown = 60, -- seconds
-			skipScreenEffects = true,
-		},
-	},
-	{
-		name = "stale_donut",
-		label = "Donuts",
-		iconOverride = "donut",
-		description = "Stale day old Donut, with a little crusty bits, and a single strand of hair",
-		price = 75,
-		isUsable = true,
-		isRemoved = true,
-		isStackable = 15,
-		type = 1,
-		rarity = 1,
-		closeUi = true,
-		weight = 0.25,
-		statusChange = {
-			Add = {
-				PLAYER_HUNGER = 15,
-			},
-		},
-		stressTicks = { "1", "1", "1", "1", "3" },
-		animConfig = {
-			anim = "donut",
-			time = 8000,
 			pbConfig = {
 				label = "Eating",
 				useWhileDead = false,
