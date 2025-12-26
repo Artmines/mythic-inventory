@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { Box, LinearProgress, Typography } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { inventoryActions } from '../inventorySlice';
@@ -19,25 +19,29 @@ interface SlotProps {
   disabled?: boolean;
 }
 
-export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps) => {
+const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotProps) => {
   const dispatch = useAppDispatch();
-  const { hover, hoverOrigin, items, player, secondary } = useAppSelector(
-    (state) => state.inventory
-  );
+  // Only subscribe to the specific parts of state we need
+  const items = useAppSelector((state) => state.inventory.items);
+  const hover = useAppSelector((state) => state.inventory.hover);
+  const hoverOrigin = useAppSelector((state) => state.inventory.hoverOrigin);
+  const player = useAppSelector((state) => state.inventory.player);
+  const secondary = useAppSelector((state) => state.inventory.secondary);
   const [tooltipAnchor, setTooltipAnchor] = useState<HTMLElement | null>(null);
   const [showSplit, setShowSplit] = useState(false);
   const [splitPosition, setSplitPosition] = useState({ x: 0, y: 0 });
 
-  const metadata: ItemMetadata = item?.MetaData
-    ? typeof item.MetaData === 'string'
-      ? lua2json(item.MetaData)
-      : item.MetaData
-    : {};
+  // Memoize metadata parsing to avoid recalculating on every render
+  const metadata: ItemMetadata = useMemo(() => {
+    if (!item?.MetaData) return {};
+    return typeof item.MetaData === 'string' ? lua2json(item.MetaData) : item.MetaData;
+  }, [item?.MetaData]);
 
   const itemData = item ? items[item.Name] : null;
   const isEmpty = !item || !itemData;
 
-  const calcDurability = (): number | null => {
+  // Memoize durability calculation
+  const durability = useMemo((): number | null => {
     if (!item?.CreateDate || !itemData?.durability) return null;
     return Math.ceil(
       100 -
@@ -45,9 +49,8 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
           itemData.durability) *
           100
     );
-  };
+  }, [item?.CreateDate, itemData?.durability]);
 
-  const durability = calcDurability();
   const isBroken = durability !== null && durability <= 0;
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -457,12 +460,13 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
     setShowSplit(false);
   };
 
-  const getDurabilityColor = () => {
+  // Memoize durability color calculation
+  const durabilityColor = useMemo(() => {
     if (!durability) return '#0FC6A6';
     if (durability >= 75) return '#0FC6A6';
     if (durability >= 50) return '#f09348';
     return '#6e1616';
-  };
+  }, [durability]);
 
   const isBeingDragged = hover && hoverOrigin?.Slot === slot && hoverOrigin?.invType === invType;
 
@@ -564,7 +568,7 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
                   height: '100%',
                   backgroundColor: 'transparent',
                   '& .MuiLinearProgress-bar': {
-                    backgroundColor: getDurabilityColor(),
+                    backgroundColor: durabilityColor,
                     transition: 'none',
                   },
                 }}
@@ -688,3 +692,6 @@ export const Slot = ({ slot, item, invType, owner, disabled = false }: SlotProps
     </>
   );
 };
+
+// Memoize the entire component to prevent unnecessary re-renders
+export const Slot = memo(SlotComponent);
