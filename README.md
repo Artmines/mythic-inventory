@@ -24,10 +24,13 @@
 <div align="center">
 
 ### Inventory Interface
-![Inventory](https://github.com/user-attachments/assets/649547a9-2f81-47e9-865d-f6ec0220276f)
+![Inventory](https://github.com/user-attachments/assets/faf87c69-d87c-44d3-9fe2-07b7a7a23ce8)
 
 ### Shop System
-![Shop](https://github.com/user-attachments/assets/848c931e-2f5b-4d40-a48f-fb99ceda1632)
+![Shop](https://github.com/user-attachments/assets/b98b7a4b-71e6-486e-b4d4-0f3e72d02377)
+
+### Crafting System
+![Crafting](https://github.com/user-attachments/assets/cf98959f-8158-48a5-a6d9-42f872979079)
 
 </div>
 
