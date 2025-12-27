@@ -1,5 +1,6 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, memo, useCallback } from 'react';
 import { Box, LinearProgress, Typography } from '@mui/material';
+import { shallowEqual } from 'react-redux';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { inventoryActions } from '../inventorySlice';
 import { getItemImage } from '../../../shared/utils/inventory';
@@ -21,12 +22,13 @@ interface SlotProps {
 
 const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotProps) => {
   const dispatch = useAppDispatch();
-  // Only subscribe to the specific parts of state we need
-  const items = useAppSelector((state) => state.inventory.items);
-  const hover = useAppSelector((state) => state.inventory.hover);
-  const hoverOrigin = useAppSelector((state) => state.inventory.hoverOrigin);
-  const player = useAppSelector((state) => state.inventory.player);
-  const secondary = useAppSelector((state) => state.inventory.secondary);
+  const { items, hover, hoverOrigin, player, secondary } = useAppSelector((state) => ({
+    items: state.inventory.items,
+    hover: state.inventory.hover,
+    hoverOrigin: state.inventory.hoverOrigin,
+    player: state.inventory.player,
+    secondary: state.inventory.secondary,
+  }), shallowEqual);
   const [tooltipAnchor, setTooltipAnchor] = useState<HTMLElement | null>(null);
   const [showSplit, setShowSplit] = useState(false);
   const [splitPosition, setSplitPosition] = useState({ x: 0, y: 0 });
@@ -53,7 +55,7 @@ const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotPro
 
   const isBroken = durability !== null && durability <= 0;
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     if (disabled) return;
     if (!item || isEmpty) return;
@@ -221,9 +223,9 @@ const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotPro
         invType,
       })
     );
-  };
+  }, [disabled, item, isEmpty, player, secondary, itemData, isBroken, invType, slot, owner, dispatch]);
 
-  const handleMouseUp = (e: React.MouseEvent) => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     if (!hover || !hoverOrigin) return;
     if (e.button !== 0) return;
@@ -384,9 +386,9 @@ const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotPro
     }
 
     dispatch(inventoryActions.clearHover());
-  };
+  }, [hover, hoverOrigin, player, secondary, invType, slot, item, items, dispatch]);
 
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     if (disabled) return;
     if (!item || isEmpty || hoverOrigin) return;
@@ -436,9 +438,9 @@ const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotPro
         invType,
       })
     );
-  };
+  }, [disabled, item, isEmpty, hoverOrigin, itemData, owner, invType, slot, dispatch, setSplitPosition, setShowSplit]);
 
-  const handleSplitDrag = (amount: number) => {
+  const handleSplitDrag = useCallback((amount: number) => {
     if (!item) return;
 
     dispatch(
@@ -458,7 +460,7 @@ const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotPro
       })
     );
     setShowSplit(false);
-  };
+  }, [item, owner, invType, slot, dispatch, setShowSplit]);
 
   // Memoize durability color calculation
   const durabilityColor = useMemo(() => {
@@ -468,6 +470,14 @@ const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotPro
     return '#6e1616';
   }, [durability]);
 
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (!isEmpty) setTooltipAnchor(e.currentTarget);
+  }, [isEmpty, setTooltipAnchor]);
+
+  const handleMouseLeave = useCallback(() => {
+    setTooltipAnchor(null);
+  }, [setTooltipAnchor]);
+
   const isBeingDragged = hover && hoverOrigin?.Slot === slot && hoverOrigin?.invType === invType;
 
   return (
@@ -476,8 +486,8 @@ const SlotComponent = ({ slot, item, invType, owner, disabled = false }: SlotPro
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onContextMenu={handleContextMenu}
-        onMouseEnter={(e) => !isEmpty && setTooltipAnchor(e.currentTarget)}
-        onMouseLeave={() => setTooltipAnchor(null)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         sx={{
         width: '100%',
         height: '125px',

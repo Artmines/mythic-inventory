@@ -1,4 +1,5 @@
 import { Box, LinearProgress, Typography } from '@mui/material';
+import { useMemo, memo } from 'react';
 import { useAppSelector } from '../../../shared/hooks';
 import { getItemImage } from '../../../shared/utils/inventory';
 import { lua2json } from '../../../shared/utils/lua';
@@ -13,19 +14,20 @@ interface HotbarSlotProps {
   isEquipped?: boolean;
 }
 
-export const HotbarSlot = ({ slot, item, isEquipped = false }: HotbarSlotProps) => {
+const HotbarSlotComponent = ({ slot, item, isEquipped = false }: HotbarSlotProps) => {
   const { items } = useAppSelector((state) => state.inventory);
 
-  const metadata: ItemMetadata = item?.MetaData
-    ? typeof item.MetaData === 'string'
-      ? lua2json(item.MetaData)
-      : item.MetaData
-    : {};
+  // Memoize metadata parsing to prevent expensive lua2json calls
+  const metadata: ItemMetadata = useMemo(() => {
+    if (!item?.MetaData) return {};
+    return typeof item.MetaData === 'string' ? lua2json(item.MetaData) : item.MetaData;
+  }, [item?.MetaData]);
 
   const itemData = item ? items[item.Name] : null;
   const isEmpty = !item || !itemData;
 
-  const calcDurability = (): number | null => {
+  // Memoize durability calculation
+  const durability = useMemo((): number | null => {
     if (!(item as any)?.CreateDate || !itemData?.durability) return null;
     return Math.ceil(
       100 -
@@ -33,17 +35,17 @@ export const HotbarSlot = ({ slot, item, isEquipped = false }: HotbarSlotProps) 
           itemData.durability) *
           100
     );
-  };
+  }, [(item as any)?.CreateDate, itemData?.durability]);
 
-  const durability = calcDurability();
   const isBroken = durability !== null && durability <= 0;
 
-  const getDurabilityColor = () => {
+  // Memoize durability color calculation
+  const durabilityColor = useMemo(() => {
     if (!durability) return '#0FC6A6';
     if (durability >= 75) return '#0FC6A6';
     if (durability >= 50) return '#f09348';
     return '#6e1616';
-  };
+  }, [durability]);
 
   return (
     <Box
@@ -111,7 +113,7 @@ export const HotbarSlot = ({ slot, item, isEquipped = false }: HotbarSlotProps) 
                   height: '100%',
                   backgroundColor: 'transparent',
                   '& .MuiLinearProgress-bar': {
-                    backgroundColor: getDurabilityColor(),
+                    backgroundColor: durabilityColor,
                     transition: 'none',
                   },
                 }}
@@ -199,3 +201,5 @@ export const HotbarSlot = ({ slot, item, isEquipped = false }: HotbarSlotProps) 
     </Box>
   );
 };
+
+export const HotbarSlot = memo(HotbarSlotComponent);

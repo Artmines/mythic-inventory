@@ -1,4 +1,5 @@
 import { Box, LinearProgress, Typography } from '@mui/material';
+import { useMemo } from 'react';
 import { useAppSelector } from '../../../shared/hooks';
 import { normalizeInventory, calcWeight } from '../../../shared/utils/inventory';
 import { Slot } from './Slot';
@@ -9,15 +10,58 @@ export const Inventory = () => {
     (state) => state.inventory
   );
 
-  const playerInv = normalizeInventory(player.inventory);
-  const secondaryInv = normalizeInventory(secondary.inventory);
+  const playerInv = useMemo(() => normalizeInventory(player.inventory), [player.inventory]);
+  const secondaryInv = useMemo(() => normalizeInventory(secondary.inventory), [secondary.inventory]);
 
-  const playerWeight = calcWeight(playerInv, items);
-  const secondaryWeight = calcWeight(secondaryInv, items);
+  const playerWeight = useMemo(() => calcWeight(playerInv, items), [playerInv, items]);
+  const secondaryWeight = useMemo(() => calcWeight(secondaryInv, items), [secondaryInv, items]);
 
-  const playerWeightPercent = player.capacity > 0 ? (playerWeight / player.capacity) * 100 : 0;
-  const secondaryWeightPercent =
-    secondary.capacity > 0 ? (secondaryWeight / secondary.capacity) * 100 : 0;
+  const playerWeightPercent = useMemo(
+    () => (player.capacity > 0 ? (playerWeight / player.capacity) * 100 : 0),
+    [playerWeight, player.capacity]
+  );
+  const secondaryWeightPercent = useMemo(
+    () => (secondary.capacity > 0 ? (secondaryWeight / secondary.capacity) * 100 : 0),
+    [secondaryWeight, secondary.capacity]
+  );
+
+  const playerSlots = useMemo(
+    () =>
+      Array.from({ length: player.size }).map((_, index) => {
+        const slotNumber = index + 1;
+        const item = playerInv.find((i) => i?.Slot === slotNumber) || null;
+        return (
+          <Slot
+            key={slotNumber}
+            slot={slotNumber}
+            item={item}
+            invType={player.invType}
+            owner={player.owner}
+            disabled={player.disabled[slotNumber] || false}
+          />
+        );
+      }),
+    [player.size, playerInv, player.invType, player.owner, player.disabled]
+  );
+
+  const secondarySlots = useMemo(
+    () =>
+      Array.from({ length: secondary.size }).map((_, index) => {
+        const slotNumber = index + 1;
+        const item = secondaryInv.find((i) => i?.Slot === slotNumber) || null;
+        return (
+          <Slot
+            key={slotNumber}
+            slot={slotNumber}
+            item={item}
+            invType={secondary.invType}
+            owner={secondary.owner}
+            disabled={secondary.disabled[slotNumber] || false}
+          />
+        );
+      }),
+    [secondary.size, secondaryInv, secondary.invType, secondary.owner, secondary.disabled]
+  );
 
   if (!itemsLoaded) {
     return (
@@ -125,20 +169,7 @@ export const Inventory = () => {
                 },
               }}
             >
-              {Array.from({ length: player.size }).map((_, index) => {
-                const slotNumber = index + 1;
-                const item = playerInv.find((i) => i?.Slot === slotNumber) || null;
-                return (
-                  <Slot
-                    key={slotNumber}
-                    slot={slotNumber}
-                    item={item}
-                    invType={player.invType}
-                    owner={player.owner}
-                    disabled={player.disabled[slotNumber] || false}
-                  />
-                );
-              })}
+              {playerSlots}
             </Box>
           </Box>
 
@@ -206,20 +237,7 @@ export const Inventory = () => {
                   },
                 }}
               >
-                {Array.from({ length: secondary.size }).map((_, index) => {
-                  const slotNumber = index + 1;
-                  const item = secondaryInv.find((i) => i?.Slot === slotNumber) || null;
-                  return (
-                    <Slot
-                      key={slotNumber}
-                      slot={slotNumber}
-                      item={item}
-                      invType={secondary.invType}
-                      owner={secondary.owner}
-                      disabled={secondary.disabled[slotNumber] || false}
-                    />
-                  );
-                })}
+                {secondarySlots}
               </Box>
             </Box>
           )}

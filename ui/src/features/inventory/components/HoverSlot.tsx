@@ -1,33 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useRef, memo } from 'react';
 import { Box, Typography } from '@mui/material';
 import { useAppSelector } from '../../../shared/hooks';
 import { getItemImage } from '../../../shared/utils/inventory';
 import { lua2json } from '../../../shared/utils/lua';
 import { rarityColors } from '../../../styles/theme';
 
-export const HoverSlot = () => {
+const HoverSlotComponent = () => {
   const { hover, items } = useAppSelector((state) => state.inventory);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const rafRef = useRef<number | undefined>(undefined);
+  const posRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
+      posRef.current.x = e.clientX;
+      posRef.current.y = e.clientY;
+
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(() => {
+          setMousePos({ x: posRef.current.x, y: posRef.current.y });
+          rafRef.current = undefined;
+        });
+      }
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
   }, []);
 
-  if (!hover) return null;
+  const itemData = hover ? items[hover.Name] : null;
 
-  const itemData = items[hover.Name];
-  if (!itemData) return null;
+  const metadata = useMemo(() => {
+    if (!hover?.MetaData) return {};
+    return typeof hover.MetaData === 'string' ? lua2json(hover.MetaData) : hover.MetaData;
+  }, [hover?.MetaData]);
 
-  const metadata = hover.MetaData
-    ? typeof hover.MetaData === 'string'
-      ? lua2json(hover.MetaData)
-      : hover.MetaData
-    : {};
+  if (!hover || !itemData) return null;
 
   return (
     <Box
@@ -98,3 +111,6 @@ export const HoverSlot = () => {
     </Box>
   );
 };
+
+// Memoize component to prevent unnecessary re-renders from parent
+export const HoverSlot = memo(HoverSlotComponent);
